@@ -1,0 +1,32 @@
+export const translations = {
+    en: {
+        'app.title': 'Rural Voice',
+        'welcome': 'Welcome',
+        'logout': 'Logout',
+        'community.issues': 'Community Issues',
+        'community.subtitle': "See what's happening in your area.",
+        'report.issue': 'Report New Issue',
+        'all.issues': 'All Issues',
+        'my.village': 'My Village',
+        'top.5': 'Top 5 (Weekly) 🔥',
+        'no.issues': 'No issues found. Be the first to report one!',
+        'status.submitted': 'Submitted',
+        'status.inprogress': 'In Progress',
+        'status.resolved': 'Resolved',
+    },
+    hi: {
+        'app.title': 'ग्रामीण आवाज़',
+        'welcome': 'स्वागत हे',
+        'logout': 'लॉग आउट',
+        'community.issues': 'सामुदायिक समस्याएं',
+        'community.subtitle': 'देखें आपके क्षेत्र में क्या हो रहा है।',
+        'report.issue': 'नई समस्या रिपोर्ट करें',
+        'all.issues': 'सभी समस्याएं',
+        'my.village': 'मेरा गाँव',
+        'top.5': 'शीर्ष 5 (साप्ताहिक) 🔥',
+        'no.issues': 'कोई समस्या नहीं मिली। सबसे पहले रिपोर्ट करें!',
+        'status.submitted': 'जमा किया',
+        'status.inprogress': 'प्रगति पर है',
+        'status.resolved': 'समाधान हो गया',
+    }
+};

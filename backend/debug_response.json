@@ -1,0 +1,11 @@
+{
+  "status": 201,
+  "body": {
+    "_id": "698c8dfd785c60466b82473d",
+    "name": "Test User",
+    "mobile": "1234567890",
+    "role": "Villager",
+    "village": "698c8dfc785c60466b824737",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5OGM4ZGZkNzg1YzYwNDY2YjgyNDczZCIsImlhdCI6MTc3MDgxOTA2OSwiZXhwIjoxNzczNDExMDY5fQ.zk0ItTVfXV7QTKxGEQhu_ja_Wb_YUqg0INbdyMcfMwM"
+  }
+}
