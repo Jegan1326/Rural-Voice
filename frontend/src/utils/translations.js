@@ -13,6 +13,9 @@ export const translations = {
         'status.submitted': 'Submitted',
         'status.inprogress': 'In Progress',
         'status.resolved': 'Resolved',
+        'progress.updates': 'Working Progress',
+        'progress.update.btn': 'Update Progress',
+        'progress.no.updates': 'No progress updates available yet.',
     },
     hi: {
         'app.title': 'ग्रामीण आवाज़',
@@ -28,5 +31,8 @@ export const translations = {
         'status.submitted': 'जमा किया',
         'status.inprogress': 'प्रगति पर है',
         'status.resolved': 'समाधान हो गया',
+        'progress.updates': 'कार्य प्रगति',
+        'progress.update.btn': 'प्रगति अपडेट करें',
+        'progress.no.updates': 'अभी तक कोई प्रगति अपडेट उपलब्ध नहीं है।',
     }
 };

@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
-import { MessageSquare, ThumbsUp, MapPin } from 'lucide-react';
+import { MessageSquare, ThumbsUp, MapPin, Activity } from 'lucide-react';
+import ProgressUpdates from './ProgressUpdates';
 
 const IssueCard = ({ issue, refreshIssues }) => {
     const { user } = useAuth();
     const [showComments, setShowComments] = useState(false);
+    const [showProgress, setShowProgress] = useState(false);
     const [commentText, setCommentText] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -37,31 +39,36 @@ const IssueCard = ({ issue, refreshIssues }) => {
     const isVoted = issue.votes.includes(user?._id);
 
     return (
-        <div className="mb-4 rounded-lg bg-white p-6 shadow-md">
-            <div className="mb-2 flex items-start justify-between">
-                <div>
-                    <h3 className="text-xl font-bold text-gray-800">{issue.title}</h3>
-                    <div className="flex items-center text-sm text-gray-500">
-                        <MapPin size={16} className="mr-1" />
-                        <span>{issue.village?.name}</span>
-                        <span className="mx-2">•</span>
-                        <span>{issue.category}</span>
+        <div className="mb-8 std-card p-6">
+            <div className="mb-6 flex items-start justify-between">
+                <div className="flex-1 mr-4">
+                    <h3 className="text-xl font-bold text-slate-900 mb-2">{issue.title}</h3>
+                    <div className="flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-500">
+                        <div className="flex items-center bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
+                            <MapPin size={14} className="mr-1.5 text-slate-400" />
+                            <span>{issue.village?.name}</span>
+                        </div>
+                        <div className="flex items-center bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
+                            <span>{issue.category}</span>
+                        </div>
                     </div>
                 </div>
-                <span className={`rounded px-2 py-1 text-xs font-bold ${issue.status === 'Resolved' ? 'bg-green-100 text-green-800' :
-                    issue.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-gray-100 text-gray-800'
+                <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider border ${issue.status === 'Resolved' ? 'bg-green-100 text-green-800 border-green-200' :
+                    issue.status === 'In Progress' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                        'bg-slate-100 text-slate-600 border-slate-200'
                     }`}>
                     {issue.status}
                 </span>
             </div>
 
             {issue.imageUrl && (
-                <img
-                    src={issue.imageUrl}
-                    alt={issue.title}
-                    className="mb-4 h-64 w-full rounded object-cover"
-                />
+                <div className="mb-4 overflow-hidden rounded-xl border border-slate-200">
+                    <img
+                        src={issue.imageUrl}
+                        alt={issue.title}
+                        className="h-64 w-full object-cover"
+                    />
+                </div>
             )}
 
             {issue.voiceUrl && (
@@ -71,29 +78,40 @@ const IssueCard = ({ issue, refreshIssues }) => {
                 </div>
             )}
 
-            <p className="mb-4 text-gray-700">{issue.description}</p>
+            <p className="mb-6 text-slate-600 text-sm leading-relaxed">{issue.description}</p>
 
-            <div className="flex items-center justify-between border-t pt-4">
-                <div className="flex space-x-4">
+            <div className="flex flex-wrap items-center justify-between border-t border-slate-100 pt-4 mt-4 gap-4">
+                <div className="flex space-x-6">
                     <button
                         onClick={handleVote}
-                        className={`flex items-center space-x-1 ${isVoted ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'}`}
+                        className={`flex items-center space-x-1.5 transition-colors ${isVoted ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
                     >
-                        <ThumbsUp size={20} fill={isVoted ? 'currentColor' : 'none'} />
-                        <span>{issue.votes.length}</span>
+                        <ThumbsUp size={18} fill={isVoted ? 'currentColor' : 'none'} />
+                        <span className="font-bold text-xs">{issue.votes.length}</span>
                     </button>
                     <button
                         onClick={() => setShowComments(!showComments)}
-                        className="flex items-center space-x-1 text-gray-500 hover:text-blue-600"
+                        className={`flex items-center space-x-1.5 transition-colors ${showComments ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
                     >
-                        <MessageSquare size={20} />
-                        <span>{issue.comments.length}</span>
+                        <MessageSquare size={18} />
+                        <span className="font-bold text-xs">{issue.comments.length}</span>
+                    </button>
+                    <button
+                        onClick={() => setShowProgress(!showProgress)}
+                        className={`flex items-center space-x-1.5 transition-colors ${showProgress ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
+                    >
+                        <Activity size={18} />
+                        <span className="text-[10px] font-bold uppercase tracking-wider">Progress</span>
                     </button>
                 </div>
-                <span className="text-xs text-gray-400">
-                    Reported by {issue.reportedBy?.name} on {new Date(issue.createdAt).toLocaleDateString()}
-                </span>
+                <div className="flex items-center text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
+                    <span>{issue.reportedBy?.name} • {new Date(issue.createdAt).toLocaleDateString()}</span>
+                </div>
             </div>
+
+            {showProgress && (
+                <ProgressUpdates issue={issue} refreshIssues={refreshIssues} />
+            )}
 
             {showComments && (
                 <div className="mt-4 border-t pt-4">

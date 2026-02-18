@@ -27,6 +27,7 @@ const authUser = async (req, res, next) => {
                 mobile: user.mobile,
                 role: user.role,
                 village: user.village,
+                villageName: user.villageName,
                 token: generateToken(user._id),
             });
         } else {
@@ -61,6 +62,7 @@ const registerUser = async (req, res, next) => {
             password,
             role,
             village,
+            villageName: req.body.villageName,
             ward,
         });
 
@@ -72,6 +74,7 @@ const registerUser = async (req, res, next) => {
                 mobile: user.mobile,
                 role: user.role,
                 village: user.village,
+                villageName: user.villageName,
                 token: generateToken(user._id),
             });
         } else {
@@ -88,7 +91,7 @@ const registerUser = async (req, res, next) => {
 // @access  Private
 const getUserProfile = async (req, res, next) => {
     try {
-        const user = await User.findById(req.user._id);
+        const user = await User.findById(req.user._id).populate('village');
 
         if (user) {
             res.json({
@@ -98,7 +101,11 @@ const getUserProfile = async (req, res, next) => {
                 mobile: user.mobile,
                 role: user.role,
                 village: user.village,
+                villageName: user.villageName,
                 ward: user.ward,
+                points: user.points,
+                badges: user.badges,
+                createdAt: user.createdAt,
             });
         } else {
             res.status(404);
@@ -109,4 +116,45 @@ const getUserProfile = async (req, res, next) => {
     }
 };
 
-module.exports = { authUser, registerUser, getUserProfile };
+// @desc    Update user profile
+// @route   PUT /api/auth/profile
+// @access  Private
+const updateUserProfile = async (req, res, next) => {
+    try {
+        const user = await User.findById(req.user._id);
+
+        if (user) {
+            user.name = req.body.name || user.name;
+            user.email = req.body.email || user.email;
+            user.village = req.body.village || user.village;
+            user.villageName = req.body.villageName || user.villageName;
+            user.ward = req.body.ward || user.ward;
+
+            if (req.body.password) {
+                user.password = req.body.password;
+            }
+
+            const updatedUser = await user.save();
+            const populatedUser = await User.findById(updatedUser._id).populate('village');
+
+            res.json({
+                _id: populatedUser._id,
+                name: populatedUser.name,
+                email: populatedUser.email,
+                mobile: populatedUser.mobile,
+                role: populatedUser.role,
+                village: populatedUser.village,
+                villageName: populatedUser.villageName,
+                ward: populatedUser.ward,
+                token: generateToken(populatedUser._id),
+            });
+        } else {
+            res.status(404);
+            throw new Error('User not found');
+        }
+    } catch (error) {
+        next(error);
+    }
+};
+
+module.exports = { authUser, registerUser, getUserProfile, updateUserProfile };

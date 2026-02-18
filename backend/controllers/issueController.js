@@ -8,9 +8,16 @@ const sendSMS = require('../utils/twilioService');
 // @access  Private
 const createIssue = async (req, res, next) => {
     try {
-        const { title, description, category, village, location } = req.body;
+        const { title, description, category, village, villageName, location } = req.body;
+        console.log('--- Create Issue Request ---');
+        console.log('Title:', title);
+        console.log('Body Village ID:', village);
+        console.log('User Village ID (from req.user):', req.user?.village);
+        console.log('Village Name:', villageName);
+
         let imageUrl = '';
         let voiceUrl = '';
+        // ... (rest of file)
 
         if (req.files) {
             if (req.files.image) {
@@ -33,10 +40,11 @@ const createIssue = async (req, res, next) => {
             title,
             description,
             category,
-            village: village || req.user.village, // Use provided village or default to user's
+            village: village || req.user.village,
+            villageName: villageName || req.user.villageName,
             imageUrl,
             voiceUrl,
-            location: location ? JSON.parse(location) : undefined, // Handle stringified location if sent via FormData
+            location: location ? JSON.parse(location) : undefined,
             reportedBy: req.user._id,
         });
 
@@ -343,4 +351,87 @@ const replyToComment = async (req, res, next) => {
     }
 };
 
-module.exports = { createIssue, getIssues, getIssueById, updateIssueStatus, voteIssue, addComment, assignIssue, replyToComment };
+// @desc    Add a progress update to an issue
+// @route   POST /api/issues/:id/progress
+// @access  Private/Coordinator/Admin
+const addProgressUpdate = async (req, res, next) => {
+    try {
+        const { description, status } = req.body;
+        const issue = await Issue.findById(req.params.id);
+
+        if (!issue) {
+            res.status(404);
+            throw new Error('Issue not found');
+        }
+
+        // Check if user is Villager or Coordinator
+        if (req.user.role !== 'Villager' && req.user.role !== 'Coordinator') {
+            res.status(401);
+            throw new Error('Not authorized to add progress updates');
+        }
+
+        let imageUrl = '';
+        if (req.files && req.files.image) {
+            imageUrl = req.files.image[0].path;
+            if (!imageUrl.startsWith('http')) {
+                imageUrl = `/uploads/${req.files.image[0].filename}`;
+            }
+        }
+
+        const update = {
+            user: req.user._id,
+            description,
+            imageUrl,
+        };
+
+        issue.progressUpdates.push(update);
+
+        if (status) {
+            issue.status = status;
+        }
+
+        await issue.save();
+
+        const updatedIssue = await Issue.findById(req.params.id)
+            .populate('reportedBy', 'name')
+            .populate('village', 'name')
+            .populate('progressUpdates.user', 'name');
+
+        res.status(201).json(updatedIssue);
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Get issues for the logged in user's village
+// @route   GET /api/issues/my-village
+// @access  Private
+const getMyVillageIssues = async (req, res, next) => {
+    try {
+        const userId = req.user._id;
+        const userVillageId = req.user.village;
+
+        console.log(`[MYVILLAGE] Fetching for User: ${userId}, Village: ${userVillageId}`);
+
+        if (!userVillageId) {
+            console.log(`[MYVILLAGE] Error: No village ID found for user ${userId}`);
+            return res.json([]); // Return empty list instead of 400 for better UI experience
+        }
+
+        const issues = await Issue.find({ village: userVillageId })
+            .populate('reportedBy', 'name')
+            .populate('village', 'name')
+            .populate('comments.user', 'name')
+            .populate('comments.replies.user', 'name')
+            .sort({ createdAt: -1 });
+
+        console.log(`[MYVILLAGE] Found ${issues.length} issues in database`);
+
+        res.json(issues);
+    } catch (error) {
+        console.error('[MYVILLAGE] Error:', error);
+        next(error);
+    }
+};
+
+module.exports = { createIssue, getIssues, getIssueById, updateIssueStatus, voteIssue, addComment, assignIssue, replyToComment, addProgressUpdate, getMyVillageIssues };

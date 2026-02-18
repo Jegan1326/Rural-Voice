@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "cross-env NODE_ENV=test jest --testTimeout=10000 --runInBand"
+    "test": "cross-env NODE_ENV=test jest --testTimeout=10000 --runInBand",
+    "dev": "nodemon server.js"
   },
   "keywords": [],
   "author": "",

@@ -33,7 +33,9 @@ const createVillage = async (req, res, next) => {
 // @access  Public
 const getVillages = async (req, res, next) => {
     try {
-        const villages = await Village.find({});
+        const { district } = req.query;
+        const query = district ? { district } : {};
+        const villages = await Village.find(query);
         res.json(villages);
     } catch (error) {
         next(error);

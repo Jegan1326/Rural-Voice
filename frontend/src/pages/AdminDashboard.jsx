@@ -2,20 +2,20 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import { useNavigate } from 'react-router-dom';
+import { Activity } from 'lucide-react';
+import ProgressUpdates from '../components/ProgressUpdates';
 
 const AdminDashboard = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
-    const [villages, setVillages] = useState([]);
     const [issues, setIssues] = useState([]);
     const [users, setUsers] = useState([]);
-    const [newVillage, setNewVillage] = useState({
-        name: '',
-        district: '',
-        state: '',
-        wards: '',
-    });
     const [activeTab, setActiveTab] = useState('issues'); // 'issues' or 'villages'
+    const [showProgress, setShowProgress] = useState({}); // { issueId: boolean }
+
+    const toggleProgress = (id) => {
+        setShowProgress(prev => ({ ...prev, [id]: !prev[id] }));
+    };
 
     useEffect(() => {
         if (user?.role !== 'Admin' && user?.role !== 'SuperAdmin') {
@@ -29,9 +29,6 @@ const AdminDashboard = () => {
             const issuesRes = await api.get('/issues');
             setIssues(issuesRes.data);
 
-            const villagesRes = await api.get('/villages');
-            setVillages(villagesRes.data);
-
             const usersRes = await api.get('/users?village=' + user.village);
             setUsers(usersRes.data);
         } catch (err) {
@@ -39,18 +36,6 @@ const AdminDashboard = () => {
         }
     };
 
-    const handleCreateVillage = async (e) => {
-        e.preventDefault();
-        try {
-            const wardsArray = newVillage.wards.split(',').map(w => w.trim());
-            await api.post('/villages', { ...newVillage, wards: wardsArray });
-            setNewVillage({ name: '', district: '', state: '', wards: '' });
-            fetchData();
-            alert('Village created successfully!');
-        } catch (err) {
-            alert(err.response?.data?.message || 'Failed to create village');
-        }
-    };
 
     const handleStatusUpdate = async (id, status) => {
         try {
@@ -87,39 +72,48 @@ const AdminDashboard = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-100">
-            <nav className="bg-gray-800 p-4 text-white shadow-md">
+        <div className="min-h-screen bg-slate-100 text-slate-900 pb-20">
+
+            <nav className="std-nav p-4 sticky top-0 z-50 px-6">
                 <div className="container mx-auto flex items-center justify-between">
-                    <h1 className="text-xl font-bold">Admin Panel - Rural Voice</h1>
-                    <div className="flex items-center space-x-4">
-                        <span>{user?.name} ({user?.role})</span>
-                        <button onClick={handleLogout} className="rounded bg-red-600 px-3 py-1 hover:bg-red-700">Logout</button>
+                    <div className="flex items-center space-x-2">
+                        <h1 className="text-xl font-bold tracking-tight text-slate-900">
+                            Village <span className="text-primary">Admin</span>
+                        </h1>
+                    </div>
+                    <div className="flex items-center space-x-6">
+                        <span className="hidden md:inline text-xs font-semibold text-slate-600 uppercase tracking-widest">
+                            Authority: <span className="text-slate-900 font-bold">{user?.name}</span>
+                        </span>
+                        <button onClick={handleLogout} className="text-slate-600 hover:text-red-600 text-xs font-bold uppercase transition-colors">
+                            Logout
+                        </button>
                     </div>
                 </div>
             </nav>
 
             <main className="container mx-auto p-4">
-                <div className="mb-6 flex space-x-4">
+                <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex flex-wrap gap-2">
+                        <button
+                            className={`rounded-lg px-6 py-2 text-xs font-semibold transition-all border ${activeTab === 'issues'
+                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                            onClick={() => setActiveTab('issues')}
+                        >
+                            Active Issues
+                        </button>
+                        <button
+                            className={`rounded-lg px-6 py-2 text-xs font-semibold transition-all border ${activeTab === 'users'
+                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                            onClick={() => setActiveTab('users')}
+                        >
+                            Community List
+                        </button>
+                    </div>
                     <button
-                        className={`rounded px-4 py-2 font-bold ${activeTab === 'issues' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'}`}
-                        onClick={() => setActiveTab('issues')}
-                    >
-                        Manage Issues
-                    </button>
-                    <button
-                        className={`rounded px-4 py-2 font-bold ${activeTab === 'villages' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'}`}
-                        onClick={() => setActiveTab('villages')}
-                    >
-                        Manage Villages
-                    </button>
-                    <button
-                        className={`rounded px-4 py-2 font-bold ${activeTab === 'users' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'}`}
-                        onClick={() => setActiveTab('users')}
-                    >
-                        Manage Users
-                    </button>
-                    <button
-                        className="rounded bg-purple-600 px-4 py-2 font-bold text-white hover:bg-purple-700"
+                        className="std-button-secondary bg-slate-800 hover:bg-slate-900 text-white text-xs py-2 px-6 ml-auto"
                         onClick={() => navigate('/admin/analytics')}
                     >
                         View Analytics
@@ -127,154 +121,106 @@ const AdminDashboard = () => {
                 </div>
 
                 {activeTab === 'issues' && (
-                    <div className="grid gap-4">
+                    <div className="grid gap-8">
                         {issues.map(issue => (
-                            <div key={issue._id} className="rounded-lg bg-white p-6 shadow-md">
-                                <div className="flex justify-between">
-                                    <h3 className="text-xl font-bold">{issue.title}</h3>
-                                    <span className={`rounded px-2 py-1 text-sm font-bold ${issue.status === 'Resolved' ? 'bg-green-100 text-green-800' :
-                                        issue.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800' :
-                                            'bg-gray-100 text-gray-800'
+                            <div key={issue._id} className="std-card p-6">
+                                <div className="flex justify-between items-start mb-4">
+                                    <h3 className="text-xl std-heading text-slate-900">{issue.title}</h3>
+                                    <span className={`rounded-full px-4 py-1 text-[10px] font-bold uppercase tracking-wider border ${issue.status === 'Resolved' ? 'bg-green-100 text-green-800 border-green-200' :
+                                        issue.status === 'In Progress' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                                            'bg-slate-100 text-slate-600 border-slate-200'
                                         }`}>
                                         {issue.status}
                                     </span>
                                 </div>
-                                <p className="text-gray-600">{issue.description}</p>
-                                <p className="mt-2 text-sm text-gray-500">
-                                    Reported by: {issue.reportedBy?.name} | Village: {issue.village?.name}
-                                </p>
-                                <div className="mt-4 flex items-center justify-between">
-                                    <div className="flex space-x-2">
+                                <p className="text-slate-600 text-sm mb-4 leading-relaxed">{issue.description}</p>
+                                <div className="flex items-center space-x-4 text-xs text-slate-500 font-medium pb-4 border-b border-slate-100 mb-4">
+                                    <span>Reported by: <span className="text-slate-900">{issue.reportedBy?.name}</span></span>
+                                    <span>|</span>
+                                    <span>Village: <span className="text-slate-900">{issue.village?.name}</span></span>
+                                </div>
+                                <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
+                                    <div className="flex flex-wrap gap-2">
                                         {['Submitted', 'Under Review', 'In Progress', 'Resolved'].map(status => (
                                             <button
                                                 key={status}
                                                 onClick={() => handleStatusUpdate(issue._id, status)}
                                                 disabled={issue.status === status}
-                                                className={`rounded px-3 py-1 text-xs ${issue.status === status
-                                                    ? 'cursor-not-allowed bg-gray-300'
-                                                    : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                                                className={`rounded-md px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all border ${issue.status === status
+                                                    ? 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed'
+                                                    : 'bg-white border-slate-200 text-slate-600 hover:border-primary hover:text-primary'
                                                     }`}
                                             >
                                                 {status}
                                             </button>
                                         ))}
                                     </div>
-                                    <div className="flex items-center space-x-2">
-                                        <span className="text-sm font-bold text-gray-700">Assign To:</span>
-                                        <select
-                                            className="rounded border p-1 text-sm"
-                                            value={issue.assignedTo?._id || issue.assignedTo || ''}
-                                            onChange={(e) => handleAssign(issue._id, e.target.value)}
+                                    <div className="flex items-center space-x-3">
+                                        <button
+                                            onClick={() => toggleProgress(issue._id)}
+                                            className={`flex items-center space-x-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${showProgress[issue._id] ? 'bg-slate-200 text-slate-800' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                                         >
-                                            <option value="">-- Unassigned --</option>
-                                            {users.map(u => (
-                                                <option key={u._id} value={u._id}>{u.name} ({u.role})</option>
-                                            ))}
-                                        </select>
+                                            <Activity size={14} />
+                                            <span>Progress ({issue.progressUpdates?.length || 0})</span>
+                                        </button>
+                                        <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-lg border border-slate-200 px-3">
+                                            <span className="text-[10px] uppercase font-bold text-slate-500">Assign:</span>
+                                            <select
+                                                className="bg-transparent border-none text-xs font-bold text-slate-800 focus:ring-0 p-0"
+                                                value={issue.assignedTo?._id || issue.assignedTo || ''}
+                                                onChange={(e) => handleAssign(issue._id, e.target.value)}
+                                            >
+                                                <option value="">Unassigned</option>
+                                                {users.map(u => (
+                                                    <option key={u._id} value={u._id}>{u.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
                                     </div>
                                 </div>
+                                {showProgress[issue._id] && (
+                                    <div className="mt-4 border-t pt-2">
+                                        <ProgressUpdates issue={issue} refreshIssues={fetchData} />
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
                 )}
 
-                {activeTab === 'villages' && (
-                    <div className="grid gap-6 md:grid-cols-2">
-                        <div className="rounded-lg bg-white p-6 shadow-md">
-                            <h3 className="mb-4 text-lg font-bold">Add New Village</h3>
-                            <form onSubmit={handleCreateVillage}>
-                                <div className="mb-3">
-                                    <input
-                                        type="text"
-                                        placeholder="Village Name"
-                                        className="w-full rounded border p-2"
-                                        value={newVillage.name}
-                                        onChange={(e) => setNewVillage({ ...newVillage, name: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <div className="mb-3">
-                                    <input
-                                        type="text"
-                                        placeholder="District"
-                                        className="w-full rounded border p-2"
-                                        value={newVillage.district}
-                                        onChange={(e) => setNewVillage({ ...newVillage, district: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <div className="mb-3">
-                                    <input
-                                        type="text"
-                                        placeholder="State"
-                                        className="w-full rounded border p-2"
-                                        value={newVillage.state}
-                                        onChange={(e) => setNewVillage({ ...newVillage, state: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <div className="mb-3">
-                                    <input
-                                        type="text"
-                                        placeholder="Wards (comma separated)"
-                                        className="w-full rounded border p-2"
-                                        value={newVillage.wards}
-                                        onChange={(e) => setNewVillage({ ...newVillage, wards: e.target.value })}
-                                    />
-                                </div>
-                                <button type="submit" className="w-full rounded bg-green-600 py-2 text-white hover:bg-green-700">
-                                    Create Village
-                                </button>
-                            </form>
-                        </div>
-
-                        <div className="rounded-lg bg-white p-6 shadow-md">
-                            <h3 className="mb-4 text-lg font-bold">Existing Villages</h3>
-                            <ul className="max-h-96 overflow-y-auto">
-                                {villages.map(v => (
-                                    <li key={v._id} className="mb-2 border-b pb-2">
-                                        <p className="font-bold">{v.name}</p>
-                                        <p className="text-sm text-gray-600">{v.district}, {v.state}</p>
-                                        <p className="text-xs text-gray-500">{v.wards.length} Wards</p>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    </div>
-                )}
 
                 {activeTab === 'users' && (
-                    <div className="rounded-lg bg-white p-6 shadow-md">
-                        <h3 className="mb-4 text-lg font-bold">Manage Users</h3>
+                    <div className="std-card">
+                        <h3 className="mb-6 text-xl std-heading">Community Members</h3>
                         <div className="overflow-x-auto">
                             <table className="min-w-full text-left">
                                 <thead>
-                                    <tr className="border-b">
-                                        <th className="p-2">Name</th>
-                                        <th className="p-2">Role</th>
-                                        <th className="p-2">Status</th>
-                                        <th className="p-2">Action</th>
+                                    <tr className="border-b border-slate-200 text-[10px] uppercase tracking-widest text-slate-500 font-bold">
+                                        <th className="p-4">Name</th>
+                                        <th className="p-4">Role</th>
+                                        <th className="p-4">Status</th>
+                                        <th className="p-4 text-right">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {users.map(u => (
-                                        <tr key={u._id} className="border-b hover:bg-gray-50">
-                                            <td className="p-2">{u.name}</td>
-                                            <td className="p-2">{u.role}</td>
-                                            <td className="p-2">
+                                        <tr key={u._id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                                            <td className="p-4 font-semibold text-slate-900">{u.name}</td>
+                                            <td className="p-4 text-sm text-slate-600">{u.role}</td>
+                                            <td className="p-4">
                                                 {u.isBanned ? (
-                                                    <span className="rounded bg-red-100 px-2 py-1 text-xs font-bold text-red-800">Banned</span>
+                                                    <span className="rounded-full bg-red-100 px-3 py-1 text-[10px] font-bold text-red-800 uppercase">Banned</span>
                                                 ) : (
-                                                    <span className="rounded bg-green-100 px-2 py-1 text-xs font-bold text-green-800">Active</span>
+                                                    <span className="rounded-full bg-green-100 px-3 py-1 text-[10px] font-bold text-green-800 uppercase">Active</span>
                                                 )}
                                             </td>
-                                            <td className="p-2">
+                                            <td className="p-4 text-right">
                                                 {u.role !== 'Admin' && u.role !== 'SuperAdmin' && (
                                                     <button
                                                         onClick={() => handleBanUser(u._id)}
-                                                        className={`rounded px-3 py-1 text-xs font-bold text-white ${u.isBanned ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}
+                                                        className={`rounded-lg px-4 py-1 text-[10px] font-bold text-white transition-all shadow-sm uppercase ${u.isBanned ? 'bg-green-600' : 'bg-red-600'}`}
                                                     >
-                                                        {u.isBanned ? 'Unban' : 'Ban'}
+                                                        {u.isBanned ? 'Unban' : 'Ban User'}
                                                     </button>
                                                 )}
                                             </td>

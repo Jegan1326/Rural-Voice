@@ -3,9 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../api/axios';
 import IssueCard from '../components/IssueCard';
-import IssueMap from '../components/IssueMap';
 import Leaderboard from '../components/Leaderboard';
-// import { io } from 'socket.io-client';
+import { io } from 'socket.io-client';
 
 import { useLanguage } from '../context/LanguageContext';
 
@@ -15,149 +14,159 @@ const Dashboard = () => {
     const navigate = useNavigate();
     const [issues, setIssues] = useState([]);
     const [filter, setFilter] = useState('all'); // all, myVillage
-    const [view, setView] = useState('list'); // list, map
+
+
+    const fetchIssues = async () => {
+        if (!user) return;
+        try {
+            const isAdmin = user.role === 'Admin' || user.role === 'SuperAdmin';
+            const endpoint = isAdmin ? '/issues' : '/issues/my-village';
+
+            console.log(`[DASHBOARD] Fetching: ${endpoint}, Role: ${user.role}`);
+
+            const { data } = await api.get(endpoint);
+            console.log(`[DASHBOARD] Received ${data.length} issues`);
+
+            setIssues(data);
+        } catch (err) {
+            console.error("[DASHBOARD] Fetch Error:", err);
+            setIssues([]);
+        }
+    };
 
     useEffect(() => {
         fetchIssues();
 
-        /*
-        const socket = io('http://localhost:5000');
-        
+        const socket = io(window.location.origin.replace('5173', '5000'));
         if (user?.village) {
-            socket.emit('joinVillage', user.village);
+            const villageId = user.village._id || user.village;
+            socket.emit('joinVillage', villageId.toString());
         }
-
-        socket.on('newIssue', (newIssue) => {
-            setIssues((prev) => [newIssue, ...prev]);
-        });
 
         socket.on('issueUpdated', (updatedIssue) => {
-            setIssues((prev) => prev.map(issue => issue._id === updatedIssue._id ? updatedIssue : issue));
+            setIssues(prev => prev.map(issue =>
+                issue._id === updatedIssue._id ? updatedIssue : issue
+            ));
         });
 
-        return () => {
-            socket.disconnect();
-        };
-        */
-    }, [filter, user]);
+        socket.on('newIssue', (newIssue) => {
+            setIssues(prev => [newIssue, ...prev]);
+        });
 
-    const fetchIssues = async () => {
-        try {
-            let url = '/issues';
-            if (filter === 'myVillage' && user?.village) {
-                url += `?village=${user.village}`;
-            } else if (filter === 'top5') {
-                url += `?timeRange=weekly&sort=top&limit=5`;
-                if (user?.village) url += `&village=${user.village}`;
-            }
-            const { data } = await api.get(url);
-            setIssues(data);
-        } catch (err) {
-            console.error("Failed to fetch issues", err);
-        }
-    };
+        return () => socket.disconnect();
+    }, [filter, user]);
 
     const handleLogout = () => {
         logout();
         navigate('/login');
     };
 
+    const filteredIssues = filter === 'all' ? issues :
+        filter === 'myVillage' ? issues.filter(i => {
+            const issueVillageId = i.village?._id || i.village;
+            const userVillageId = user?.village?._id || user?.village;
+            if (!issueVillageId || !userVillageId) return false;
+            return issueVillageId.toString() === userVillageId.toString();
+        }) :
+            filter === 'top5' ? issues.slice(0, 5) :
+                issues.filter(i => i.status === filter);
+
     return (
-        <div className="min-h-screen bg-gray-100">
-            <nav className="bg-green-600 p-4 text-white shadow-md">
+        <div className="min-h-screen bg-slate-100 pb-20">
+
+            <nav className="std-nav p-4 sticky top-0 z-50">
                 <div className="container mx-auto flex items-center justify-between">
-                    <h1 className="text-xl font-bold">{t('app.title')}</h1>
-                    <div className="flex items-center space-x-4">
-                        <button
-                            onClick={toggleLanguage}
-                            className="rounded border border-white px-2 py-1 text-xs hover:bg-green-700"
-                        >
-                            {language === 'en' ? 'हिन्दी' : 'English'}
-                        </button>
-                        <Link to="/profile" className="hidden font-bold hover:underline md:inline">
-                            {t('welcome')}, {user?.name}
-                        </Link>
+                    <div className="flex items-center space-x-2 group cursor-pointer" onClick={() => navigate('/dashboard')}>
+                        <h1 className="text-xl font-bold tracking-tight text-slate-900">
+                            Rural <span className="text-indigo-600">Voice</span>
+                        </h1>
+                    </div>
+                    <div className="flex items-center space-x-6">
+                        <span className="hidden md:inline text-xs font-semibold text-slate-600 uppercase tracking-widest">
+                            Logged in as: <span className="text-slate-900 font-bold">{user?.name}</span>
+                        </span>
                         <button
                             onClick={handleLogout}
-                            className="rounded bg-red-500 px-3 py-1 hover:bg-red-600"
+                            className="text-slate-600 hover:text-red-600 text-xs font-bold uppercase transition-colors"
                         >
-                            {t('logout')}
+                            Logout
                         </button>
                     </div>
                 </div>
             </nav>
-            <main className="container mx-auto p-4">
-                <div className="mb-6 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-                    <div>
-                        <h2 className="text-2xl font-bold text-gray-800">{t('community.issues')}</h2>
-                        <p className="text-gray-600">{t('community.subtitle')}</p>
+            <header className="bg-slate-900 py-16 text-white text-center shadow-lg">
+                <div className="container mx-auto px-4 relative z-10">
+                    <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
+                        {user?.village?.name || 'Village'} Community Dashboard
+                    </h2>
+                    <p className="text-slate-400 text-lg uppercase tracking-widest font-medium">
+                        Connecting Citizens, Resolving Issues
+                    </p>
+                    <div className="mt-8 flex flex-wrap justify-center gap-4">
+                        <button
+                            onClick={() => navigate('/report-issue')}
+                            className="std-button-primary px-8 py-3"
+                        >
+                            {t('report.issue')}
+                        </button>
+                        <button
+                            onClick={() => navigate('/profile')}
+                            className="std-button-secondary px-8 py-3"
+                        >
+                            {t('nav.profile')}
+                        </button>
                     </div>
-                    <button
-                        onClick={() => navigate('/report-issue')}
-                        className="rounded bg-blue-600 px-6 py-2 font-bold text-white shadow-lg hover:bg-blue-700"
-                    >
-                        {t('report.issue')}
-                    </button>
                 </div>
+            </header>
+            <main className="container mx-auto p-4">
+                <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex flex-wrap gap-2">
+                        {['all', 'myVillage', 'top5', 'Submitted', 'In Progress', 'Resolved'].map((f) => {
+                            const count = f === 'all' ? issues.length :
+                                f === 'myVillage' ? issues.filter(i => (i.village?._id || i.village) === (user?.village?._id || user?.village)).length :
+                                    f === 'top5' ? Math.min(issues.length, 5) :
+                                        issues.filter(i => i.status === f).length;
 
-                <div className="mb-4 flex space-x-2">
-                    <button
-                        onClick={() => setFilter('all')}
-                        className={`rounded px-4 py-2 font-bold ${filter === 'all' ? 'bg-white text-green-600 shadow' : 'text-gray-600 hover:bg-gray-200'}`}
-                    >
-                        {t('all.issues')}
-                    </button>
-                    <button
-                        onClick={() => setFilter('top5')}
-                        className={`rounded px-4 py-2 font-bold ${filter === 'top5' ? 'bg-white text-green-600 shadow' : 'text-gray-600 hover:bg-gray-200'}`}
-                    >
-                        {t('top.5')}
-                    </button>
-                    <button
-                        onClick={() => setFilter('myVillage')}
-                        className={`rounded px-4 py-2 font-bold ${filter === 'myVillage' ? 'bg-white text-green-600 shadow' : 'text-gray-600 hover:bg-gray-200'}`}
-                    >
-                        {t('my.village')}
-                    </button>
-                    <div className="ml-auto flex bg-gray-200 rounded p-1">
-                        <button
-                            onClick={() => setView('list')}
-                            className={`px-3 py-1 rounded ${view === 'list' ? 'bg-white shadow text-green-700 font-bold' : 'text-gray-600'}`}
-                        >
-                            List
-                        </button>
-                        <button
-                            onClick={() => setView('map')}
-                            className={`px-3 py-1 rounded ${view === 'map' ? 'bg-white shadow text-green-700 font-bold' : 'text-gray-600'}`}
-                        >
-                            Map
-                        </button>
+                            return (
+                                <button
+                                    key={f}
+                                    onClick={() => setFilter(f)}
+                                    className={`rounded-lg px-6 py-2 text-xs font-semibold transition-all border flex items-center space-x-2 ${filter === f
+                                        ? f === 'Resolved' ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' : 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                                        : f === 'Resolved' ? 'bg-white text-emerald-600 border-emerald-200 hover:bg-emerald-50' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                                >
+                                    <span>{f === 'all' ? 'All Issues' : f === 'myVillage' ? 'My Village' : f === 'top5' ? 'Top 5' : f}</span>
+                                    {count > 0 && (
+                                        <span className={`ml-2 px-1.5 py-0.5 rounded-full text-[10px] ${filter === f ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                            {count}
+                                        </span>
+                                    )}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 
                 <div className="flex flex-col gap-6 md:flex-row">
                     <div className="md:w-2/3">
-                        {view === 'list' ? (
-                            <>
-                                {issues.map(issue => (
-                                    <IssueCard key={issue._id} issue={issue} refreshIssues={fetchIssues} />
-                                ))}
-                                {issues.length === 0 && (
-                                    <div className="py-10 text-center text-gray-500">
-                                        <p>{t('no.issues')}</p>
-                                    </div>
-                                )}
-                            </>
-                        ) : (
-                            <IssueMap issues={issues} />
-                        )}
+                        <>
+                            {filteredIssues.map(issue => (
+                                <IssueCard key={issue._id} issue={issue} refreshIssues={fetchIssues} />
+                            ))}
+                            {filteredIssues.length === 0 && (
+                                <div className="py-20 text-center bg-white rounded-xl border border-slate-200">
+                                    <h3 className="text-lg font-bold text-slate-900 mb-1">No issues found</h3>
+                                    <p className="text-slate-500 text-sm">{t('no.issues')}</p>
+                                </div>
+                            )}
+                        </>
                     </div>
                     <div className="md:w-1/3">
                         <Leaderboard />
                     </div>
                 </div>
-            </main>
-        </div>
+            </main >
+        </div >
     );
 };
 

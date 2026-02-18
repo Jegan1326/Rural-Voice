@@ -49,7 +49,11 @@ const issueSchema = new mongoose.Schema({
     },
     village: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Village',
+        ref: 'Village', // Semantically represents Taluk now
+        required: true,
+    },
+    villageName: {
+        type: String,
         required: true,
     },
     comments: [{
@@ -71,6 +75,24 @@ const issueSchema = new mongoose.Schema({
     resolvedAt: {
         type: Date,
     },
+    progressUpdates: [{
+        user: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            required: true,
+        },
+        description: {
+            type: String,
+            required: true,
+        },
+        imageUrl: {
+            type: String,
+        },
+        recordedAt: {
+            type: Date,
+            default: Date.now,
+        }
+    }],
 }, {
     timestamps: true,
 });

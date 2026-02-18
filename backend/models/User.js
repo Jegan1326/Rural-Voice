@@ -29,6 +29,9 @@ const userSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Village',
     },
+    villageName: {
+        type: String,
+    },
     ward: {
         type: String,
     },

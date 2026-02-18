@@ -1,7 +1,24 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
+import { TN_DISTRICTS } from '../utils/districts';
+import {
+    Droplets, Zap, Navigation, Trash2, Sprout,
+    ShieldCheck, MoreHorizontal, MapPin,
+    FileText, Camera, Mic, Info, ArrowLeft, ArrowRight,
+    CheckCircle2
+} from 'lucide-react';
+
+const CATEGORIES = [
+    { id: 'Water', label: 'Water Supply', icon: Droplets, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { id: 'Electricity', label: 'Electricity', icon: Zap, color: 'text-amber-500', bg: 'bg-amber-50' },
+    { id: 'Roads', label: 'Roads & Infra', icon: Navigation, color: 'text-slate-600', bg: 'bg-slate-100' },
+    { id: 'Sanitation', label: 'Sanitation', icon: Trash2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { id: 'Agriculture', label: 'Agriculture', icon: Sprout, color: 'text-green-600', bg: 'bg-green-50' },
+    { id: 'Public Safety', label: 'Public Safety', icon: ShieldCheck, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+    { id: 'Other', label: 'Other', icon: MoreHorizontal, color: 'text-slate-400', bg: 'bg-slate-50' },
+];
 
 const ReportIssue = () => {
     const { user } = useAuth();
@@ -9,13 +26,14 @@ const ReportIssue = () => {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [category, setCategory] = useState('Water');
+    const [district, setDistrict] = useState(user?.village?.district || '');
+    const [villageId, setVillageId] = useState(user?.village?._id || user?.village || '');
+    const [villageName, setVillageName] = useState(user?.villageName || '');
+    const [villages, setVillages] = useState([]);
+    const [filteredVillages, setFilteredVillages] = useState([]);
     const [image, setImage] = useState(null);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-
-    const handleFileChange = (e) => {
-        setImage(e.target.files[0]);
-    };
 
     // Voice Recording Logic
     const [recording, setRecording] = useState(false);
@@ -23,19 +41,41 @@ const ReportIssue = () => {
     const [voiceBlob, setVoiceBlob] = useState(null);
     const [voicePreviewUrl, setVoicePreviewUrl] = useState(null);
 
+    useEffect(() => {
+        const fetchVillages = async () => {
+            try {
+                const { data } = await api.get('/villages');
+                setVillages(data);
+            } catch (err) {
+                console.error("Failed to fetch villages", err);
+            }
+        };
+        fetchVillages();
+    }, []);
+
+    useEffect(() => {
+        if (district) {
+            setFilteredVillages(villages.filter(v => v.district === district));
+        } else {
+            setFilteredVillages([]);
+        }
+    }, [district, villages]);
+
+    const handleFileChange = (e) => {
+        setImage(e.target.files[0]);
+    };
+
     const startRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             const recorder = new MediaRecorder(stream);
             const chunks = [];
-
             recorder.ondataavailable = (e) => chunks.push(e.data);
             recorder.onstop = () => {
                 const blob = new Blob(chunks, { type: 'audio/webm' });
                 setVoiceBlob(blob);
                 setVoicePreviewUrl(window.URL.createObjectURL(blob));
             };
-
             recorder.start();
             setMediaRecorder(recorder);
             setRecording(true);
@@ -62,766 +102,261 @@ const ReportIssue = () => {
         formData.append('title', title);
         formData.append('description', description);
         formData.append('category', category);
-        formData.append('village', user.village);
-        if (image) {
-            formData.append('image', image);
-        }
-        if (voiceBlob) {
-            formData.append('voice', voiceBlob, 'voice-note.webm');
-        }
+        formData.append('village', villageId);
+        formData.append('villageName', villageName);
+        if (image) formData.append('image', image);
+        if (voiceBlob) formData.append('voice', voiceBlob, 'voice-note.webm');
 
         try {
             await api.post('/issues', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
+                headers: { 'Content-Type': 'multipart/form-data' },
             });
             navigate('/dashboard');
         } catch (err) {
-            console.error(err);
             setError(err.response?.data?.message || 'Failed to submit issue');
         } finally {
             setLoading(false);
         }
     };
 
-    // Category theme configurations
-    const categoryThemes = {
-        Water: {
-            gradient: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #60a5fa 100%)',
-            icon: '💧',
-            decorElement: 'water-drop',
-            accentColor: '#3b82f6'
-        },
-        Electricity: {
-            gradient: 'linear-gradient(135deg, #854d0e 0%, #eab308 50%, #fde047 100%)',
-            icon: '⚡',
-            decorElement: 'lightning',
-            accentColor: '#eab308'
-        },
-        Roads: {
-            gradient: 'linear-gradient(135deg, #1f2937 0%, #4b5563 50%, #6b7280 100%)',
-            icon: '🛣️',
-            decorElement: 'road',
-            accentColor: '#6b7280'
-        },
-        Sanitation: {
-            gradient: 'linear-gradient(135deg, #14532d 0%, #16a34a 50%, #4ade80 100%)',
-            icon: '🌱',
-            decorElement: 'leaf',
-            accentColor: '#16a34a'
-        },
-        Agriculture: {
-            gradient: 'linear-gradient(135deg, #78350f 0%, #f59e0b 50%, #fbbf24 100%)',
-            icon: '🌾',
-            decorElement: 'wheat',
-            accentColor: '#f59e0b'
-        },
-        'Public Safety': {
-            gradient: 'linear-gradient(135deg, #7c2d12 0%, #ea580c 50%, #fb923c 100%)',
-            icon: '🚨',
-            decorElement: 'alert',
-            accentColor: '#ea580c'
-        },
-        Other: {
-            gradient: 'linear-gradient(135deg, #4c1d95 0%, #7c3aed 50%, #a78bfa 100%)',
-            icon: '📋',
-            decorElement: 'note',
-            accentColor: '#7c3aed'
-        }
-    };
-
-    const currentTheme = categoryThemes[category];
-
     return (
-        <div className="issue-report-container">
-            {/* Dynamic Background */}
-            <div
-                className="issue-background"
-                style={{ background: currentTheme.gradient }}
-            ></div>
-
-            {/* Decorative Elements based on Category */}
-            <div className={`decorative-element ${currentTheme.decorElement}`}></div>
-            <div className={`decorative-element ${currentTheme.decorElement} element-2`}></div>
-            <div className={`decorative-element ${currentTheme.decorElement} element-3`}></div>
-
-            {/* Glassmorphism Form Card */}
-            <div className="issue-card">
-                {/* Header */}
-                <div className="issue-header">
-                    <div className="issue-icon">{currentTheme.icon}</div>
-                    <h2 className="issue-title">Report Village Issue</h2>
-                    <p className="issue-subtitle">Help improve our community</p>
+        <div className="min-h-screen bg-slate-50/50 pb-24">
+            {/* Header */}
+            <div className="bg-white border-b border-slate-200 sticky top-0 z-30 px-4 py-4 mb-8">
+                <div className="max-w-4xl mx-auto flex items-center justify-between">
+                    <button
+                        onClick={() => navigate('/dashboard')}
+                        className="flex items-center gap-2 text-slate-500 hover:text-slate-800 transition-colors font-bold text-xs uppercase"
+                    >
+                        <ArrowLeft size={16} /> Discard
+                    </button>
+                    <h1 className="text-xl font-bold text-slate-900 tracking-tight">Report Concern</h1>
+                    <div className="w-20"></div> {/* Spacer */}
                 </div>
+            </div>
 
-                {error && (
-                    <div className="issue-error">
-                        <span>⚠️</span> {error}
-                    </div>
-                )}
+            <div className="max-w-4xl mx-auto px-4">
+                <form onSubmit={handleSubmit} className="space-y-8">
+                    {error && (
+                        <div className="rounded-xl bg-red-50 p-4 border border-red-100 flex items-center gap-3 text-red-700 text-sm font-semibold animate-shake">
+                            <span>⚠️</span> {error}
+                        </div>
+                    )}
 
-                <form onSubmit={handleSubmit} className="issue-form">
-                    {/* Category Selector */}
-                    <div className="issue-input-group">
-                        <label className="issue-label" htmlFor="category">
-                            📂 Issue Category
-                        </label>
-                        <select
-                            id="category"
-                            className="issue-select"
-                            value={category}
-                            onChange={(e) => setCategory(e.target.value)}
-                            style={{ borderColor: currentTheme.accentColor }}
-                        >
-                            <option value="Water">💧 Water Supply</option>
-                            <option value="Electricity">⚡ Electricity</option>
-                            <option value="Roads">🛣️ Roads & Infrastructure</option>
-                            <option value="Sanitation">🌱 Sanitation & Cleanliness</option>
-                            <option value="Agriculture">🌾 Agriculture</option>
-                            <option value="Public Safety">🚨 Public Safety</option>
-                            <option value="Other">📋 Other</option>
-                        </select>
-                    </div>
+                    {/* Step 1: Category & Identification */}
+                    <div className="card-premium p-8 rounded-2xl shadow-xl shadow-slate-200/50">
+                        <div className="flex items-center gap-3 mb-8">
+                            <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-100">1</div>
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-900 leading-tight">Identify the Concern</h3>
+                                <p className="text-xs text-slate-500 font-medium">Select a category and verify your location.</p>
+                            </div>
+                        </div>
 
-                    {/* Title */}
-                    <div className="issue-input-group">
-                        <label className="issue-label" htmlFor="title">
-                            📝 Issue Title
-                        </label>
-                        <input
-                            type="text"
-                            id="title"
-                            className="issue-input"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            placeholder="Brief description of the problem"
-                            required
-                            style={{
-                                borderColor: currentTheme.accentColor,
-                                '--focus-color': currentTheme.accentColor
-                            }}
-                        />
-                    </div>
+                        <div className="mb-8">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block mb-4 ml-1">Select a Category</label>
+                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                                {CATEGORIES.map((cat) => {
+                                    const Icon = cat.icon;
+                                    const isActive = category === cat.id;
+                                    return (
+                                        <button
+                                            key={cat.id}
+                                            type="button"
+                                            onClick={() => setCategory(cat.id)}
+                                            className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all duration-300 group ${isActive
+                                                    ? 'border-indigo-600 bg-indigo-50 shadow-md shadow-indigo-100'
+                                                    : 'border-slate-100 bg-white hover:border-slate-300'
+                                                }`}
+                                        >
+                                            <div className={`p-2 rounded-lg mb-2 transition-colors ${isActive ? 'bg-indigo-600 text-white' : `${cat.bg} ${cat.color} group-hover:bg-opacity-100`}`}>
+                                                <Icon size={20} />
+                                            </div>
+                                            <span className={`text-[10px] font-bold text-center tracking-tight ${isActive ? 'text-indigo-900' : 'text-slate-500'}`}>
+                                                {cat.label}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
 
-                    {/* Description */}
-                    <div className="issue-input-group">
-                        <label className="issue-label" htmlFor="description">
-                            📄 Detailed Description
-                        </label>
-                        <textarea
-                            id="description"
-                            rows="4"
-                            className="issue-textarea"
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            onBlur={async () => {
-                                if (description.length > 5) {
-                                    try {
-                                        const { data } = await api.post('/analytics/suggest-category', { description });
-                                        if (data.category) setCategory(data.category);
-                                    } catch (err) {
-                                        console.error("Auto-categorization failed", err);
-                                    }
-                                }
-                            }}
-                            placeholder="Explain the issue in detail..."
-                            required
-                            style={{
-                                borderColor: currentTheme.accentColor,
-                                '--focus-color': currentTheme.accentColor
-                            }}
-                        ></textarea>
-                        <p className="issue-hint">
-                            🤖 AI will auto-suggest category based on your description
-                        </p>
-                    </div>
-
-                    {/* Image Upload */}
-                    <div className="issue-input-group">
-                        <label className="issue-label" htmlFor="image">
-                            📸 Upload Image (Optional)
-                        </label>
-                        <div className="file-upload-wrapper">
-                            <input
-                                type="file"
-                                id="image"
-                                accept="image/*"
-                                className="file-input"
-                                onChange={handleFileChange}
-                            />
-                            <label htmlFor="image" className="file-upload-label" style={{ borderColor: currentTheme.accentColor }}>
-                                {image ? (
-                                    <>✅ {image.name}</>
-                                ) : (
-                                    <>📁 Click to select image</>
-                                )}
-                            </label>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-slate-100">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">District</label>
+                                <select
+                                    className="std-select bg-slate-50/50"
+                                    value={district}
+                                    onChange={(e) => { setDistrict(e.target.value); setVillageId(''); }}
+                                    required
+                                >
+                                    <option value="">Select District</option>
+                                    {TN_DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Taluk</label>
+                                <select
+                                    className="std-select bg-slate-50/50"
+                                    value={villageId}
+                                    onChange={(e) => setVillageId(e.target.value)}
+                                    disabled={!district}
+                                    required
+                                >
+                                    <option value="">Select Taluk</option>
+                                    {filteredVillages.map(v => <option key={v._id} value={v._id}>{v.name}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Village Name</label>
+                                <div className="relative group">
+                                    <MapPin size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
+                                    <input
+                                        className="std-input pl-11 bg-slate-50/50"
+                                        value={villageName}
+                                        onChange={(e) => setVillageName(e.target.value)}
+                                        placeholder="Type village name"
+                                        required
+                                        disabled={!villageId}
+                                    />
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Voice Recording */}
-                    <div className="issue-input-group">
-                        <label className="issue-label">
-                            🎤 Voice Note (Optional)
-                        </label>
-                        <div className="voice-controls">
-                            {!recording ? (
-                                <button
-                                    type="button"
-                                    onClick={startRecording}
-                                    className="voice-button record-button"
-                                    style={{ backgroundColor: currentTheme.accentColor }}
-                                >
-                                    <span className="mic-icon">🎙️</span>
-                                    Start Recording
-                                </button>
-                            ) : (
-                                <button
-                                    type="button"
-                                    onClick={stopRecording}
-                                    className="voice-button stop-button"
-                                >
-                                    <span className="stop-icon">⏹️</span>
-                                    Stop Recording
-                                </button>
-                            )}
-                            {voicePreviewUrl && (
-                                <audio controls src={voicePreviewUrl} className="audio-player" />
-                            )}
+                    {/* Step 2: Description */}
+                    <div className="card-premium p-8 rounded-2xl shadow-xl shadow-slate-200/50">
+                        <div className="flex items-center gap-3 mb-8">
+                            <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-100">2</div>
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-900 leading-tight">Describe the Problem</h3>
+                                <p className="text-xs text-slate-500 font-medium">Provide details to help officials understand the issue.</p>
+                            </div>
                         </div>
-                        <p className="issue-hint">Record up to 1 minute</p>
+
+                        <div className="space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Title</label>
+                                <div className="relative group">
+                                    <FileText size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
+                                    <input
+                                        className="std-input pl-11 py-3 text-base font-bold bg-slate-50/50 border-slate-200 focus:bg-white transition-all"
+                                        value={title}
+                                        onChange={(e) => setTitle(e.target.value)}
+                                        placeholder="E.g., Broken water pipe near temple"
+                                        required
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Detailed Description</label>
+                                <textarea
+                                    className="std-textarea min-h-32 bg-slate-50/50 border-slate-200 focus:bg-white transition-all p-4 text-sm font-semibold"
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    placeholder="Impact of the problem, location details, etc..."
+                                    required
+                                ></textarea>
+                                <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50 border border-indigo-100 rounded-lg">
+                                    <Info size={14} className="text-indigo-600" />
+                                    <p className="text-[10px] text-indigo-700 font-bold uppercase tracking-tighter">AI will analyze this to refine categorization</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="action-buttons">
-                        <button
-                            type="button"
-                            onClick={() => navigate('/dashboard')}
-                            className="cancel-button"
-                        >
-                            ← Back
-                        </button>
+                    {/* Step 3: Evidence */}
+                    <div className="card-premium p-8 rounded-2xl shadow-xl shadow-slate-200/50">
+                        <div className="flex items-center gap-3 mb-8">
+                            <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-100">3</div>
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-900 leading-tight">Attach Evidence</h3>
+                                <p className="text-xs text-slate-500 font-medium">Visual or audio proof accelerates resolution.</p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            {/* Photo Upload Card */}
+                            <div className={`p-6 rounded-2xl border-2 border-dashed transition-all ${image ? 'border-indigo-600 bg-indigo-50/30' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
+                                <div className="flex flex-col items-center text-center">
+                                    <div className={`p-4 rounded-full mb-4 ${image ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                                        <Camera size={32} />
+                                    </div>
+                                    <h4 className="text-sm font-bold text-slate-900 mb-2">{image ? 'Image Attached' : 'Take or Upload Photo'}</h4>
+                                    <p className="text-xs text-slate-500 mb-6 font-medium">PNG, JPG up to 5MB</p>
+                                    <label className="cursor-pointer std-button bg-slate-900 text-white hover:bg-black py-2 px-6 flex items-center gap-2 text-xs">
+                                        <ArrowRight size={14} /> {image ? 'Change Photo' : 'Select File'}
+                                        <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                                    </label>
+                                    {image && <p className="mt-3 text-[10px] font-bold text-indigo-600 truncate max-w-full">{image.name}</p>}
+                                </div>
+                            </div>
+
+                            {/* Voice Note Card */}
+                            <div className={`p-6 rounded-2xl border-2 border-dashed transition-all ${voiceBlob ? 'border-indigo-600 bg-indigo-50/30' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
+                                <div className="flex flex-col items-center text-center">
+                                    <div className={`p-4 rounded-full mb-4 ${recording ? 'bg-red-500 text-white animate-pulse' : voiceBlob ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                                        <Mic size={32} />
+                                    </div>
+                                    <h4 className="text-sm font-bold text-slate-900 mb-2">{recording ? 'Recording...' : voiceBlob ? 'Voice Note Ready' : 'Record Voice Note'}</h4>
+                                    <p className="text-xs text-slate-500 mb-6 font-medium">Easier for detailed explanations</p>
+
+                                    {!recording ? (
+                                        <button
+                                            type="button"
+                                            onClick={startRecording}
+                                            className="std-button bg-slate-900 text-white hover:bg-black py-2 px-6 flex items-center gap-2 text-xs"
+                                        >
+                                            <Mic size={14} /> {voiceBlob ? 'Record Again' : 'Start Recording'}
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={stopRecording}
+                                            className="std-button bg-red-600 text-white hover:bg-red-700 py-2 px-6 flex items-center gap-2 text-xs"
+                                        >
+                                            Stop
+                                        </button>
+                                    )}
+
+                                    {voicePreviewUrl && (
+                                        <div className="mt-4 w-full bg-white p-2 rounded-xl shadow-sm">
+                                            <audio controls src={voicePreviewUrl} className="w-full h-8" />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Submit Bar */}
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-6 animate-in slide-in-from-bottom-4 duration-700">
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-full border-4 border-indigo-100 flex items-center justify-center text-indigo-600">
+                                <CheckCircle2 size={24} />
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-bold text-slate-900">Final Verification</h4>
+                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Please review your submission above.</p>
+                            </div>
+                        </div>
                         <button
                             type="submit"
-                            disabled={loading}
-                            className="submit-button"
-                            style={{ background: `linear-gradient(135deg, ${currentTheme.accentColor} 0%, ${currentTheme.accentColor}dd 100%)` }}
+                            disabled={loading || !title || !description || !villageId}
+                            className="std-button-primary w-full md:w-auto px-16 py-4 text-base tracking-wide shadow-2xl shadow-indigo-200 flex items-center justify-center gap-3 group"
                         >
-                            {loading ? '⏳ Submitting...' : '🚀 Submit Issue'}
+                            {loading ? (
+                                <span className="animate-pulse flex items-center gap-2 italic">Submitting...</span>
+                            ) : (
+                                <>
+                                    <span>Submit Report</span>
+                                    <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                                </>
+                            )}
                         </button>
                     </div>
                 </form>
             </div>
-
-            <style jsx>{`
-                .issue-report-container {
-                    position: relative;
-                    min-height: 100vh;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    padding: 20px;
-                    overflow: hidden;
-                    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-                }
-
-                /* Dynamic Background */
-                .issue-background {
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    transition: background 0.6s ease;
-                    z-index: 0;
-                }
-
-                /* Decorative Elements */
-                .decorative-element {
-                    position: absolute;
-                    opacity: 0.15;
-                    z-index: 1;
-                }
-
-                /* Water Drops */
-                .water-drop {
-                    width: 60px;
-                    height: 80px;
-                    background: rgba(255, 255, 255, 0.4);
-                    border-radius: 0 50% 50% 50%;
-                    transform: rotate(-45deg);
-                    animation: fallDrop 4s ease-in-out infinite;
-                }
-
-                .water-drop.element-2 {
-                    top: 10%;
-                    right: 20%;
-                    animation-delay: 1s;
-                }
-
-                .water-drop.element-3 {
-                    top: 60%;
-                    left: 15%;
-                    animation-delay: 2s;
-                }
-
-                @keyframes fallDrop {
-                    0%, 100% { transform: rotate(-45deg) translateY(0); }
-                    50% { transform: rotate(-45deg) translateY(20px); }
-                }
-
-                /* Lightning Bolts */
-                .lightning {
-                    width: 0;
-                    height: 0;
-                    border-left: 25px solid transparent;
-                    border-right: 25px solid transparent;
-                    border-top: 60px solid rgba(255, 255, 255, 0.5);
-                    animation: flash 2s ease-in-out infinite;
-                }
-
-                .lightning.element-2 {
-                    top: 15%;
-                    right: 25%;
-                    animation-delay: 0.5s;
-                }
-
-                .lightning.element-3 {
-                    bottom: 20%;
-                    left: 20%;
-                    animation-delay: 1.5s;
-                }
-
-                @keyframes flash {
-                    0%, 100% { opacity: 0.15; }
-                    50% { opacity: 0.4; }
-                }
-
-                /* Road Markings */
-                .road {
-                    width: 80px;
-                    height: 20px;
-                    background: repeating-linear-gradient(
-                        90deg,
-                        rgba(255, 255, 255, 0.4) 0px,
-                        rgba(255, 255, 255, 0.4) 20px,
-                        transparent 20px,
-                        transparent 40px
-                    );
-                    animation: roadMove 3s linear infinite;
-                }
-
-                .road.element-2 {
-                    top: 20%;
-                    right: 15%;
-                }
-
-                .road.element-3 {
-                    bottom: 30%;
-                    left: 10%;
-                }
-
-                @keyframes roadMove {
-                    0% { background-position: 0 0; }
-                    100% { background-position: 40px 0; }
-                }
-
-                /* Leaves */
-                .leaf {
-                    width: 50px;
-                    height: 50px;
-                    background: rgba(255, 255, 255, 0.3);
-                    border-radius: 0 100%;
-                    animation: leafSway 3s ease-in-out infinite;
-                }
-
-                .leaf.element-2 {
-                    top: 25%;
-                    right: 18%;
-                    animation-delay: 1s;
-                }
-
-                .leaf.element-3 {
-                    bottom: 25%;
-                    left: 22%;
-                    animation-delay: 2s;
-                }
-
-                @keyframes leafSway {
-                    0%, 100% { transform: rotate(0deg); }
-                    50% { transform: rotate(15deg); }
-                }
-
-                /* Wheat */
-                .wheat {
-                    width: 5px;
-                    height: 70px;
-                    background: rgba(255, 255, 255, 0.4);
-                    border-radius: 50% 50% 0 0;
-                    animation: wheatWave 2.5s ease-in-out infinite;
-                }
-
-                .wheat.element-2 {
-                    top: 18%;
-                    right: 12%;
-                    animation-delay: 0.8s;
-                }
-
-                .wheat.element-3 {
-                    bottom: 22%;
-                    left: 18%;
-                    animation-delay: 1.6s;
-                }
-
-                @keyframes wheatWave {
-                    0%, 100% { transform: rotate(-5deg); }
-                    50% { transform: rotate(5deg); }
-                }
-
-                /* Alert/Safety */
-                .alert {
-                    width: 70px;
-                    height: 70px;
-                    border: 8px solid rgba(255, 255, 255, 0.4);
-                    border-radius: 50%;
-                    animation: alertPulse 2s ease-in-out infinite;
-                }
-
-                .alert.element-2 {
-                    top: 22%;
-                    right: 20%;
-                }
-
-                .alert.element-3 {
-                    bottom: 28%;
-                    left: 16%;
-                    animation-delay: 1s;
-                }
-
-                @keyframes alertPulse {
-                    0%, 100% { transform: scale(1); opacity: 0.15; }
-                    50% { transform: scale(1.2); opacity: 0.3; }
-                }
-
-                /* Note/Other */
-                .note {
-                    width: 60px;
-                    height: 60px;
-                    background: rgba(255, 255, 255, 0.3);
-                    border-radius: 8px;
-                    animation: noteFloat 4s ease-in-out infinite;
-                }
-
-                .note.element-2 {
-                    top: 20%;
-                    right: 25%;
-                    animation-delay: 1.3s;
-                }
-
-                .note.element-3 {
-                    bottom: 25%;
-                    left: 20%;
-                    animation-delay: 2.6s;
-                }
-
-                @keyframes noteFloat {
-                    0%, 100% { transform: translateY(0) rotate(0deg); }
-                    50% { transform: translateY(-15px) rotate(5deg); }
-                }
-
-                /* Form Card */
-                .issue-card {
-                    position: relative;
-                    width: 100%;
-                    max-width: 600px;
-                    background: rgba(255, 255, 255, 0.18);
-                    backdrop-filter: blur(25px);
-                    border-radius: 20px;
-                    padding: 35px 30px;
-                    box-shadow: 
-                        0 8px 32px 0 rgba(31, 38, 135, 0.25),
-                        0 0 0 1px rgba(255, 255, 255, 0.2);
-                    border: 1px solid rgba(255, 255, 255, 0.3);
-                    z-index: 10;
-                    animation: cardEntrance 0.6s ease-out;
-                }
-
-                @keyframes cardEntrance {
-                    from {
-                        opacity: 0;
-                        transform: translateY(30px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                }
-
-                /* Header */
-                .issue-header {
-                    text-align: center;
-                    margin-bottom: 25px;
-                }
-
-                .issue-icon {
-                    font-size: 48px;
-                    margin-bottom: 10px;
-                    animation: iconPop 0.8s ease-out;
-                }
-
-                @keyframes iconPop {
-                    0% { transform: scale(0); }
-                    60% { transform: scale(1.2); }
-                    100% { transform: scale(1); }
-                }
-
-                .issue-title {
-                    font-size: 28px;
-                    font-weight: 700;
-                    color: #ffffff;
-                    margin: 0 0 6px 0;
-                    text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3);
-                }
-
-                .issue-subtitle {
-                    font-size: 14px;
-                    color: rgba(255, 255, 255, 0.9);
-                    margin: 0;
-                    font-weight: 400;
-                }
-
-                /* Error */
-                .issue-error {
-                    background: rgba(220, 38, 38, 0.85);
-                    backdrop-filter: blur(10px);
-                    color: #ffffff;
-                    padding: 12px 16px;
-                    border-radius: 10px;
-                    margin-bottom: 20px;
-                    font-size: 14px;
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    animation: errorShake 0.5s ease;
-                }
-
-                @keyframes errorShake {
-                    0%, 100% { transform: translateX(0); }
-                    25% { transform: translateX(-8px); }
-                    75% { transform: translateX(8px); }
-                }
-
-                /* Form */
-                .issue-form {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 18px;
-                }
-
-                .issue-input-group {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 8px;
-                }
-
-                .issue-label {
-                    font-size: 14px;
-                    font-weight: 600;
-                    color: rgba(255, 255, 255, 0.95);
-                    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
-                }
-
-                .issue-input,
-                .issue-select,
-                .issue-textarea {
-                    padding: 12px 14px;
-                    background: rgba(255, 255, 255, 0.92);
-                    border: 2px solid rgba(255, 255, 255, 0.4);
-                    border-radius: 10px;
-                    font-size: 15px;
-                    color: #2d3748;
-                    transition: all 0.3s ease;
-                    outline: none;
-                }
-
-                .issue-input::placeholder,
-                .issue-textarea::placeholder {
-                    color: rgba(0, 0, 0, 0.4);
-                }
-
-                .issue-input:focus,
-                .issue-select:focus,
-                .issue-textarea:focus {
-                    background: rgba(255, 255, 255, 1);
-                    box-shadow: 
-                        0 0 0 4px var(--focus-color, #3b82f6)33,
-                        0 4px 12px rgba(0, 0, 0, 0.1);
-                    transform: translateY(-2px);
-                }
-
-                .issue-select {
-                    cursor: pointer;
-                    font-weight: 500;
-                }
-
-                .issue-hint {
-                    font-size: 12px;
-                    color: rgba(255, 255, 255, 0.85);
-                    margin: 0;
-                    font-style: italic;
-                }
-
-                /* File Upload */
-                .file-upload-wrapper {
-                    position: relative;
-                }
-
-                .file-input {
-                    display: none;
-                }
-
-                .file-upload-label {
-                    display: block;
-                    padding: 14px 16px;
-                    background: rgba(255, 255, 255, 0.92);
-                    border: 2px dashed rgba(255, 255, 255, 0.4);
-                    border-radius: 10px;
-                    text-align: center;
-                    cursor: pointer;
-                    transition: all 0.3s ease;
-                    color: #2d3748;
-                    font-weight: 500;
-                }
-
-                .file-upload-label:hover {
-                    background: rgba(255, 255, 255, 1);
-                    transform: translateY(-2px);
-                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-                }
-
-                /* Voice Controls */
-                .voice-controls {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    flex-wrap: wrap;
-                }
-
-                .voice-button {
-                    padding: 12px 20px;
-                    border: none;
-                    border-radius: 10px;
-                    color: #ffffff;
-                    font-size: 14px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    transition: all 0.3s ease;
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                }
-
-                .record-button {
-                    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-                }
-
-                .record-button:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-                }
-
-                .stop-button {
-                    background: #dc2626;
-                    animation: recordPulse 1.5s ease-in-out infinite;
-                }
-
-                @keyframes recordPulse {
-                    0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
-                    50% { box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
-                }
-
-                .mic-icon,
-                .stop-icon {
-                    font-size: 18px;
-                }
-
-                .audio-player {
-                    flex: 1;
-                    min-width: 200px;
-                    height: 40px;
-                    border-radius: 20px;
-                }
-
-                /* Action Buttons */
-                .action-buttons {
-                    display: flex;
-                    justify-content: space-between;
-                    gap: 12px;
-                    margin-top: 10px;
-                }
-
-                .cancel-button,
-                .submit-button {
-                    padding: 14px 28px;
-                    border: none;
-                    border-radius: 10px;
-                    font-size: 15px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    transition: all 0.3s ease;
-                }
-
-                .cancel-button {
-                    background: rgba(255, 255, 255, 0.2);
-                    color: rgba(255, 255, 255, 0.95);
-                    border: 2px solid rgba(255, 255, 255, 0.3);
-                }
-
-                .cancel-button:hover {
-                    background: rgba(255, 255, 255, 0.3);
-                    transform: translateY(-2px);
-                }
-
-                .submit-button {
-                    color: #ffffff;
-                    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-                    flex: 1;
-                }
-
-                .submit-button:hover:not(:disabled) {
-                    transform: translateY(-3px);
-                    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-                }
-
-                .submit-button:disabled {
-                    opacity: 0.6;
-                    cursor: not-allowed;
-                }
-
-                /* Responsive */
-                @media (max-width: 640px) {
-                    .issue-card {
-                        padding: 25px 20px;
-                    }
-
-                    .issue-title {
-                        font-size: 24px;
-                    }
-
-                    .issue-icon {
-                        font-size: 40px;
-                    }
-
-                    .action-buttons {
-                        flex-direction: column;
-                    }
-
-                    .decorative-element {
-                        transform: scale(0.7);
-                    }
-                }
-            `}</style>
         </div>
     );
 };
