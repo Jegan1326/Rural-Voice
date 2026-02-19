@@ -55,8 +55,7 @@ const createIssue = async (req, res, next) => {
             .populate('reportedBy', 'name')
             .populate('village', 'name');
 
-        const io = req.app.get('io');
-        io.to(village).emit('newIssue', populatedIssue);
+        io.emit('newIssue', populatedIssue);
 
         // Send SMS to Reporter
         if (req.user.mobile) {
@@ -160,16 +159,15 @@ const updateIssueStatus = async (req, res, next) => {
 
         if (issue) {
             if (req.user.role === 'Admin' || req.user.role === 'SuperAdmin' || req.user.role === 'Coordinator') {
-                issue.status = status;
                 if (status === 'Resolved' && issue.status !== 'Resolved') {
                     issue.resolvedAt = Date.now();
                     // Award points to the reporter
                     await User.findByIdAndUpdate(issue.reportedBy, { $inc: { points: 50 } });
                 }
+                issue.status = status;
                 const updatedIssue = await issue.save();
 
-                const io = req.app.get('io');
-                io.to(issue.village.toString()).emit('issueUpdated', updatedIssue);
+                io.emit('issueUpdated', updatedIssue);
 
                 // Send Email Notification
                 if (status === 'Resolved' && updatedIssue.reportedBy) {

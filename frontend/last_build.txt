@@ -1,0 +1,104 @@
+
+> frontend@0.0.0 build
+> vite build
+
+[36mvite v7.3.1 [32mbuilding client environment for production...[36m[39m
+transforming...
+[32m???[39m 7 modules transformed.
+node.exe : 
+[31m???[39m Build 
+failed in 89ms
+At line:1 char:1
++ & "C:\Program Files\
+nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo 
+...
++ ~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
+~~~~~
+    + CategoryInfo    
+          : 
+NotSpecified: ([3    
+1m???[39m Build 
+faile    d in 
+89ms:String) [],     
+RemoteException
+    + 
+FullyQualifiedErrorI  
+  d : 
+NativeCommandError
+ 
+[31merror during 
+build:
+[31m[vite-plugin-pwa:
+build] [plugin vite-pl
+ugin-pwa:build] 
+src/index.css: There 
+was an error during 
+the build:
+  Cannot apply 
+unknown utility class 
+`shadow-[0_10px_40px_-
+5px_rgba(0,`
+Additionally, 
+handling the error in 
+the 'buildEnd' hook 
+caused the following 
+error:
+  Cannot apply 
+unknown utility class 
+`shadow-[0_10px_40px_-
+5px_rgba(0,`[31m
+file: [36mC:/Rural Vo
+ice/frontend/src/index
+.css[31m
+    at getRollupError 
+(file:///C:/Rural%20Vo
+ice/frontend/node_modu
+les/rollup/dist/es/sha
+red/parseAst.js:402:41
+)
+    at file:///C:/Rura
+l%20Voice/frontend/nod
+e_modules/rollup/dist/
+es/shared/node-entry.j
+s:23444:39
+    at async catchUnfi
+nishedHookActions (fil
+e:///C:/Rural%20Voice/
+frontend/node_modules/
+rollup/dist/es/shared/
+node-entry.js:22902:16
+)
+    at async 
+rollupInternal (file:/
+//C:/Rural%20Voice/fro
+ntend/node_modules/rol
+lup/dist/es/shared/nod
+e-entry.js:23427:5)
+    at async 
+buildEnvironment (file
+:///C:/Rural%20Voice/f
+rontend/node_modules/v
+ite/dist/node/chunks/c
+onfig.js:33541:12)
+    at async 
+Object.build (file:///
+C:/Rural%20Voice/front
+end/node_modules/vite/
+dist/node/chunks/confi
+g.js:33900:19)
+    at async 
+Object.buildApp (file:
+///C:/Rural%20Voice/fr
+ontend/node_modules/vi
+te/dist/node/chunks/co
+nfig.js:33897:153)
+    at async 
+CAC.<anonymous> (file:
+///C:/Rural%20Voice/fr
+ontend/node_modules/vi
+te/dist/node/cli.js:62
+9:3)[39m

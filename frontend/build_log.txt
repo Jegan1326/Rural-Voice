@@ -1,0 +1,107 @@
+﻿
+> frontend@0.0.0 build
+> vite build
+
+[36mvite v7.3.1 [32mbuilding client environment for production...[36m[39m
+transforming...
+[32mΓ£ô[39m 4 modules transformed.
+node.exe : 
+[31mΓ£ù[39m Build 
+failed in 82ms
+At line:1 char:1
++ & "C:\Program Files
+\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo 
+...
++ ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: ([31mΓ£   
+ ù[39m Build fai    
+led in 82ms:Stri    
+ng) [], RemoteEx    
+ception
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+[31merror during 
+build:
+[31m[vite-plugin-pwa
+:build] [plugin vite-
+plugin-pwa:build] 
+src/index.css: There 
+was an error during 
+the build:
+  Cannot apply 
+unknown utility 
+class `shadow-[0_10px
+_40px_-5px_rgba(0,`
+Additionally, 
+handling the error 
+in the 'buildEnd' 
+hook caused the 
+following error:
+  Cannot apply 
+unknown utility 
+class `shadow-[0_10px
+_40px_-5px_rgba(0,`[
+31m
+file: [36mC:/Rural V
+oice/frontend/src/ind
+ex.css[31m
+    at 
+getRollupError (file:
+///C:/Rural%20Voice/f
+rontend/node_modules/
+rollup/dist/es/shared
+/parseAst.js:402:41)
+    at file:///C:/Rur
+al%20Voice/frontend/n
+ode_modules/rollup/di
+st/es/shared/node-ent
+ry.js:23444:39
+    at async catchUnf
+inishedHookActions (f
+ile:///C:/Rural%20Voi
+ce/frontend/node_modu
+les/rollup/dist/es/sh
+ared/node-entry.js:22
+902:16)
+    at async 
+rollupInternal (file:
+///C:/Rural%20Voice/f
+rontend/node_modules/
+rollup/dist/es/shared
+/node-entry.js:23427:
+5)
+    at async 
+buildEnvironment (fil
+e:///C:/Rural%20Voice
+/frontend/node_module
+s/vite/dist/node/chun
+ks/config.js:33541:12
+)
+    at async 
+Object.build (file://
+/C:/Rural%20Voice/fro
+ntend/node_modules/vi
+te/dist/node/chunks/c
+onfig.js:33900:19)
+    at async 
+Object.buildApp (file
+:///C:/Rural%20Voice/
+frontend/node_modules
+/vite/dist/node/chunk
+s/config.js:33897:153
+)
+    at async 
+CAC.<anonymous> (file
+:///C:/Rural%20Voice/
+frontend/node_modules
+/vite/dist/node/cli.j
+s:629:3)[39m

@@ -3,7 +3,6 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../api/axios';
 import IssueCard from '../components/IssueCard';
-import Leaderboard from '../components/Leaderboard';
 import { io } from 'socket.io-client';
 
 import { useLanguage } from '../context/LanguageContext';
@@ -19,8 +18,7 @@ const Dashboard = () => {
     const fetchIssues = async () => {
         if (!user) return;
         try {
-            const isAdmin = user.role === 'Admin' || user.role === 'SuperAdmin';
-            const endpoint = isAdmin ? '/issues' : '/issues/my-village';
+            const endpoint = '/issues';
 
             console.log(`[DASHBOARD] Fetching: ${endpoint}, Role: ${user.role}`);
 
@@ -71,6 +69,12 @@ const Dashboard = () => {
             filter === 'top5' ? issues.slice(0, 5) :
                 issues.filter(i => i.status === filter);
 
+    const stats = {
+        total: issues.length,
+        resolved: issues.filter(i => i.status === 'Resolved').length,
+        pending: issues.filter(i => i.status !== 'Resolved').length
+    };
+
     return (
         <div className="min-h-screen bg-slate-100 pb-20">
 
@@ -119,11 +123,31 @@ const Dashboard = () => {
                 </div>
             </header>
             <main className="container mx-auto p-4">
+                {/* Highlights Section */}
+                <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div className="std-card bg-white p-4 flex flex-col items-center justify-center border-l-4 border-indigo-500">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Total Issues</span>
+                        <span className="mt-1 text-3xl font-bold text-slate-900">{stats.total}</span>
+                    </div>
+                    <div className="std-card bg-white p-4 flex flex-col items-center justify-center border-l-4 border-emerald-500">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Resolved</span>
+                        <span className="mt-1 text-3xl font-bold text-emerald-600">{stats.resolved}</span>
+                    </div>
+                    <div className="std-card bg-white p-4 flex flex-col items-center justify-center border-l-4 border-amber-500">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Pending</span>
+                        <span className="mt-1 text-3xl font-bold text-amber-600">{stats.pending}</span>
+                    </div>
+                </div>
+
                 <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
                     <div className="flex flex-wrap gap-2">
-                        {['all', 'myVillage', 'top5', 'Submitted', 'In Progress', 'Resolved'].map((f) => {
+                        {['all', 'myVillage', 'top5', 'Submitted', 'Under Review', 'In Progress', 'Resolved'].map((f) => {
                             const count = f === 'all' ? issues.length :
-                                f === 'myVillage' ? issues.filter(i => (i.village?._id || i.village) === (user?.village?._id || user?.village)).length :
+                                f === 'myVillage' ? issues.filter(i => {
+                                    const issueVillageId = i.village?._id || i.village;
+                                    const userVillageId = user?.village?._id || user?.village;
+                                    return issueVillageId?.toString() === userVillageId?.toString();
+                                }).length :
                                     f === 'top5' ? Math.min(issues.length, 5) :
                                         issues.filter(i => i.status === f).length;
 
@@ -147,8 +171,8 @@ const Dashboard = () => {
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-6 md:flex-row">
-                    <div className="md:w-2/3">
+                <div className="flex flex-col gap-6">
+                    <div className="w-full">
                         <>
                             {filteredIssues.map(issue => (
                                 <IssueCard key={issue._id} issue={issue} refreshIssues={fetchIssues} />
@@ -160,9 +184,6 @@ const Dashboard = () => {
                                 </div>
                             )}
                         </>
-                    </div>
-                    <div className="md:w-1/3">
-                        <Leaderboard />
                     </div>
                 </div>
             </main >
